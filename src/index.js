@@ -28,7 +28,7 @@ function toggleCheckbox() {
         });
     });
 }
-toggleCheckbox();
+
 
 
 // const checkbox = document.querySelector('#discount-checkbox');
@@ -59,7 +59,7 @@ function toggleCart(){
         document.body.style.overflow = '';
     });
 }
-toggleCart();
+
 //end cart
 
 //работа с корзиной
@@ -116,7 +116,7 @@ function addCart() {
     }
 }
 
-addCart();
+
 //end работа с корзиной
 
 //фильтр и поиск
@@ -183,6 +183,25 @@ function actionPage() {
         });
     }
 
+    //ДРУГОЙ ВАРИАНТ НАПИСАНИЯ ФИЛЬТРА 
+    // function filter() {
+    //     cards.forEach((card) => {
+    //         const cardPrice = elem.querySelector('.card-price');
+
+    //         //отрезаем пробел,Р(рубль) или доллар от цифры цены посредством встроенной функции parseFloat
+    //         const price = parseFloat(cardPrice.textContent);
+    //         const discount = document.querySelector('.card-sale');
+
+    //         if ((min.value && price < min.value) || (max.value && price > max.value)) {
+    //             card.parentNode.style.display = 'none';
+    //         } else if (discountCheckbox.checked && !discount) {
+    //             card.parentNode.style.display = 'none';
+    //         } else {
+    //          card.parentNode.style.display = '';
+    //         }
+    //     });
+    // }
+
     //поиск
     searchBtn.addEventListener('click', () => {
         const searchText = new RegExp(search.value.trim(), 'i');
@@ -197,12 +216,120 @@ function actionPage() {
                 elem.parentNode.style.display = '';
             }
         });
-
         //для очистки строки поиска
         search.value = '';
     });
+    
+}
+//end фильтр и поиск
+
+
+//получение данных с сервера - с помощью return не вызываем, 
+//а возвращаем для того, чтобы в следующий then их передать, 
+//а он получит их в коллбэк функции и прописываем его уже после вызова getData где-то 50 строчек ниже
+function getData () {
+    const goodsWrapper = document.querySelector('.goods');
+    // fetch заменил httpx request  - get
+    return fetch('../db/db.json')
+        .then((response)=> {
+            if (response.ok) {
+                return response.json();
+                console.log(response.json());
+            } else {
+                //создаем объект ошиьбки
+                throw new Error('Данные не были получены, ошибка' + response.status);
+            }
+        })
+        .then((data)  => {
+            return data;
+        })
+        .catch(err => {
+            console.warn(err);
+            goodsWrapper.innerHTML = '<div style="color:red; font-size: 30px;" >Что-то пошло не так</div>';
+        });
+    // console.log(fetch('../db/db.json'));
 }
 
-actionPage();
+//выводим карточки товара 
+function renderCards(data) {
+    const goodsWrapper = document.querySelector('.goods');
+    //перебираем товары
+    data.goods.forEach((good)=>{
+        const card = document.createElement('div');
+        // console.log(good); - когда так выводим, то можем посмотреть свойства товара из объекта 
+        card.className = 'col-12 col-md-6 col-lg-4 col-xl-3';
+        card.innerHTML = `
+            <div class="card" data-category="${good.category}">
+                ${good.sale ? '<div class="card-sale">🔥Hot Sale🔥</div>' : ''}
+                
+                <div class="card-img-wrapper">
+                    <span class="card-img-top"
+                        style="background-image: url('${good.img}')"></span>
+                </div>
+                <div class="card-body justify-content-between">
+                    <div class="card-price" style="${good.sale ? 'color: red' : ''}">${good.price} ₽</div>
+                    <h5 class="card-title">${good.title}</h5>
+                    <button class="btn btn-primary">В корзину</button>
+                </div>
+            </div>
+      
+        `;
 
-//end фильтр и поиск
+        goodsWrapper.appendChild(card);
+    });
+//  console.log(data.goods);
+}
+
+function renderCatalog() {
+    const cards = document.querySelectorAll('.goods .card');
+    const catalogList = document.querySelector('.catalog-list');
+    const catalogBtn = document.querySelector('.catalog-button');
+    const catalogWrapper = document.querySelector('.catalog');
+    //создаем коллекцию (set -хранит только уникальные значения и map)
+    const categories = new Set();
+
+    cards.forEach((card)=> {
+        //обращаемся к свойству, которое мы прописали в data attribut
+        // console.dir(card.dataset.category);
+        categories.add(card.dataset.category);
+    });
+
+    categories.forEach((item)=>{
+        const li = document.createElement('li');
+        li.textContent = item;
+        catalogList.appendChild(li);
+    });
+
+    catalogBtn.addEventListener('click', (event) => {
+        if (catalogWrapper.style.display) {
+            catalogWrapper.style.display = '';
+        } else {
+            catalogWrapper.style.display = 'block';
+        }
+        console.log(event);
+
+//         tagName: "LI"
+// textContent: "Периферия для ПК"
+
+        if (event.target.tagName === 'LI') {
+            cards.forEach((card)=> {
+                if (card.dataset.category === event.target.textContent) {
+                    card.parentNode.style.display = '';
+                } else {
+                    card.parentNode.style.display = 'none';
+                }
+            });
+        }
+    });
+
+    console.log(categories);
+}
+
+getData().then((data)=> {
+    renderCards(data);
+    toggleCheckbox();
+    toggleCart();
+    addCart();
+    actionPage();
+    renderCatalog();
+});
